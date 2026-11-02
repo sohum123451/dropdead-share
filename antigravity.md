@@ -463,6 +463,21 @@ Invoke-RestMethod -Uri http://localhost:3000/health | ConvertTo-Json
   - `npx playwright test e2e/screenshots.spec.ts`: **2 of 2 tests passed cleanly (43.6s)**, axe-core 0 violations.
   - `npx playwright test e2e/e2e.spec.ts`: **5 of 5 end-to-end functional tests passed cleanly (21.1s)**.
 
+### 2026-11-02 09:38 — Phase 7: GitHub & Vercel Publishing (ADR-013)
+- **Action**: Published the complete monorepo to GitHub and deployed the redesigned frontend to Vercel production.
+- **Deliverables**:
+  1. **GitHub Repository**: Created public repository [`sohum123451/dropdead-share`](https://github.com/sohum123451/dropdead-share) on GitHub.
+     - Pushed clean `main` branch with 95 files tracking `/backend`, `/frontend`, `/docs`, `docker-compose.yml`, test suites, and documentation.
+     - Sensitive credentials (`.env`), SQLite databases (`metadata.db`), cache folders (`.tools`, `.vercel`, `node_modules`), and logs strictly ignored.
+     - Added comprehensive root [`README.md`](file:///c:/Users/manga/OneDrive/Desktop/New%20folder%20(4)/README.md) with system architecture diagram, contract references, and quickstart commands.
+  2. **Vercel Production Deployment**:
+     - Resolved `tsc -b` unused variable lint check in `DownloadPage.tsx`.
+     - Built and promoted production deployment `dpl_3mseVnWTDAdTSUizP758Guv492vo`.
+     - Re-aliased canonical production domain to [`https://dropdead-share.vercel.app`](https://dropdead-share.vercel.app).
+- **Verification Outputs**:
+  - `curl.exe -I https://dropdead-share.vercel.app`: **HTTP/1.1 200 OK** (Content-Type: `text/html; charset=utf-8`, Server: `Vercel`).
+  - `gh repo view sohum123451/dropdead-share`: **Repository active and tracking main**.
+
 ---
 *End of Ledger. Subsequent changes, decisions, and test outputs will be appended below.*
 
