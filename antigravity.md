@@ -478,6 +478,27 @@ Invoke-RestMethod -Uri http://localhost:3000/health | ConvertTo-Json
   - `curl.exe -I https://dropdead-share.vercel.app`: **HTTP/1.1 200 OK** (Content-Type: `text/html; charset=utf-8`, Server: `Vercel`).
   - `gh repo view sohum123451/dropdead-share`: **Repository active and tracking main**.
 
+### 2026-11-02 09:55 — Phase 8: Cross-Device Access Root Cause & LAN Enablement (ADR-014)
+- **Problem**: Scanning the QR code from another device (e.g. mobile phone) rendered `"Link not found"`.
+- **Root Cause Analysis**:
+  1. The backend API (`localhost:3000`), SQLite database, and MinIO storage (`localhost:9000`) were running solely on the host computer.
+  2. `dropdead-share.vercel.app` only hosts the static React client; no backend is deployed on Vercel.
+  3. When another device opened the link, it requested `/api/links/:token/info` from Vercel (or `localhost`), which returned fallback `index.html`.
+  4. The frontend's `getLinkInfo` caught the non-JSON response and unconditionally defaulted to `setState('not_found')`, masking the underlying connection failure as an apparent missing link.
+  5. Furthermore, generated pre-signed URLs pointed to `http://localhost:9000`, which remote devices cannot reach.
+- **Resolutions Applied**:
+  1. **LAN Network Binding**:
+     - Configured `frontend/vite.config.ts` with `server.host: true` to broadcast on the local Wi-Fi (`http://192.168.29.165:5173`).
+     - Set `backend/.env` with `S3_ENDPOINT=http://192.168.29.165:9000`, verified end-to-end upload and download from the LAN address.
+     - Vite dev server automatically proxies `/api` calls from any LAN client to the local Express backend.
+  2. **Error Taxonomy Precision**:
+     - Updated `frontend/src/api.ts` to inspect `Content-Type`. If an endpoint returns HTML instead of JSON, an explicit `NETWORK_ERROR` is thrown instead of swallowing null.
+     - Added `connection_error` portal state to `DownloadPage.tsx`: renders `"Cannot connect to server"` when the storage backend is unreachable, rather than misleading the user with `"Link not found"`.
+  3. **Vercel & Git Synchronized**:
+     - Built and promoted deployment `dpl_FPWkh2froJTDGN5yE24zZsHQ4fUv`.
+     - Aliased to `https://dropdead-share.vercel.app`.
+     - Committed and pushed commit `3f8b225` to GitHub `main`.
+
 ---
 *End of Ledger. Subsequent changes, decisions, and test outputs will be appended below.*
 
