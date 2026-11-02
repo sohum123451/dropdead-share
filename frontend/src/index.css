@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+
+  /* Color Tokens - Light */
+  --bg-canvas: #fbfbfa;
+  --bg-surface: #ffffff;
+  --bg-muted: #f4f4f2;
+  --bg-subtle: #eaeae7;
+
+  --text-main: #18181b;
+  /* Meets > 4.5:1 contrast against #fbfbfa (7.2:1) */
+  --text-muted: #52525b;
+  --text-faint: #71717a;
+
+  --border-default: #d4d4d8;
+  --border-strong: #a1a1aa;
+
+  /* Accent used ONLY for error text and countdown under 5 minutes */
+  --accent: #b91c1c;
+  --accent-hover: #991b1b;
+  --accent-fg: #ffffff;
+
+  --destructive: #b91c1c;
+
+  /* Typography */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Radii (max 6px) */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Color Tokens - Dark */
+    --bg-canvas: #121212;
+    --bg-surface: #181818;
+    --bg-muted: #222222;
+    --bg-subtle: #2a2a2a;
+
+    --text-main: #f4f4f5;
+    /* Meets > 4.5:1 contrast against #121212 (7.4:1) */
+    --text-muted: #a1a1aa;
+    --text-faint: #71717a;
+
+    --border-default: #2e2e32;
+    --border-strong: #3f3f46;
+
+    --accent: #ef4444;
+    --accent-hover: #dc2626;
+    --accent-fg: #ffffff;
+
+    --destructive: #ef4444;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg-canvas);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tabular numerals for countdown and numbers */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Accessible focus ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
