@@ -14,7 +14,8 @@ type PortalState =
   | 'password_gate'
   | 'not_found'
   | 'expired'
-  | 'exhausted';
+  | 'exhausted'
+  | 'connection_error';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -122,11 +123,13 @@ export const DownloadPage: React.FC = () => {
           setState('exhausted');
         } else if (err.code === 'PASSWORD_REQUIRED') {
           setState('password_gate');
+        } else if (err.code === 'NETWORK_ERROR') {
+          setState('connection_error');
         } else {
           setState('not_found');
         }
       } else {
-        setState('not_found');
+        setState('connection_error');
       }
     }
   }, [token, downloadGrantToken]);
@@ -323,7 +326,31 @@ export const DownloadPage: React.FC = () => {
     );
   }
 
-  // 4. NOT FOUND STATE
+  // 4. CONNECTION ERROR STATE (e.g. backend unreachable)
+  if (state === 'connection_error') {
+    return (
+      <div className="space-y-4" data-testid="state-connection-error">
+        <div>
+          <h1 className="text-2xl sm:text-[26px] font-semibold text-main leading-tight">
+            Cannot connect to server
+          </h1>
+          <p className="text-sm text-text-muted mt-1 leading-normal">
+            Unable to reach the file storage backend. Ensure the server is online and reachable from your device.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Link
+            to="/"
+            className="inline-block px-3.5 py-2 border border-border-default bg-surface hover:bg-muted rounded-sm text-xs font-medium text-main transition-colors"
+          >
+            Go to home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // 5. NOT FOUND STATE
   if (state === 'not_found') {
     return (
       <div className="space-y-4" data-testid="state-not-found">

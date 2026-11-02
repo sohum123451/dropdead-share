@@ -112,11 +112,24 @@ export function setCustomApiUrl(url: string | null): void {
 }
 
 async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    throw new ApiError(
+      'NETWORK_ERROR',
+      `Server returned ${contentType || 'non-JSON'} instead of JSON (status ${res.status}). The API backend may be unreachable or not running on this domain.`,
+      res.status
+    );
+  }
+
   let body: unknown;
   try {
     body = await res.json();
   } catch {
-    body = null;
+    throw new ApiError(
+      'NETWORK_ERROR',
+      'Failed to parse JSON response from server.',
+      res.status
+    );
   }
 
   if (!res.ok) {

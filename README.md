@@ -125,3 +125,4 @@ npx playwright test e2e/e2e.spec.ts
 cd frontend
 npx playwright test e2e/screenshots.spec.ts
 ```
+
