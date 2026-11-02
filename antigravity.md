@@ -499,6 +499,51 @@ Invoke-RestMethod -Uri http://localhost:3000/health | ConvertTo-Json
      - Aliased to `https://dropdead-share.vercel.app`.
      - Committed and pushed commit `3f8b225` to GitHub `main`.
 
+### 2026-11-02 11:45 — Phase 9: Vercel Serverless Backend & Global Cloud Persistence (ADR-015)
+- **Context & Motivation**:
+  - The local Express + MinIO setup required the user's laptop to stay online and connected to the same Wi-Fi.
+  - User requested: "use some database and have working backend on vercell", "do it urself i will give u required permissions".
+- **Architectural Implementation**:
+  1. **Serverless Functions on Vercel (`frontend/api/`)**:
+     - `api/health.ts`: System health monitor (`200 OK`).
+     - `api/uploads/init.ts`: Validates upload limits, issues pre-signed PUT URLs via `@vercel/blob`, records pending upload session.
+     - `api/uploads/[id]/finalize.ts`: Verifies storage payload existence via `findUploadedBlob`, computes Argon2/Bcrypt password hash, generates 32-character base64url share token, saves active link metadata, returns share link.
+     - `api/links/[token]/info.ts`: Lazy expiration and quota enforcement; returns metadata (`filename`, `fileSize`, `contentType`, `isPasswordProtected`, `expiresAt`, `remainingDownloads`) without leaking the payload URL.
+     - `api/links/[token]/verify.ts`: Validates password with rate limiting (5 attempts / 15 mins), issues HMAC-SHA256 download grant token.
+     - `api/links/[token]/download.ts`: Validates grant token or password, decrements remaining downloads atomically, purges blob payload upon reaching 0, returns download URL.
+  2. **Dual-Mode Persistence Layer (`frontend/api/_lib/db.ts`)**:
+     - **PostgreSQL Mode**: Triggered automatically when `DATABASE_URL` is set. Runs DDL migration `CREATE TABLE IF NOT EXISTS files` and executes single-statement atomic decrement:
+       ```sql
+       UPDATE files 
+       SET remaining_downloads = remaining_downloads - 1,
+           status = CASE WHEN remaining_downloads - 1 = 0 THEN 'dead' ELSE status END
+       WHERE token = $1 AND remaining_downloads > 0 AND expires_at > $2 AND status = 'active'
+       RETURNING *;
+       ```
+     - **Event-Sourced Cloud Log Mode**: Out-of-the-box zero-setup persistence on Vercel Blob store (`BLOB_READ_WRITE_TOKEN`).
+       - Immutably stores link definition at `meta/links/${token}/meta.json`.
+       - Records atomic downloads as write-once receipt blobs: `meta/links/${token}/downloads/${n}.json`.
+       - Calculates remaining downloads in real time via control-plane `list({ prefix })` operations, completely bypassing Edge CDN cache poisoning and race conditions across serverless instances.
+  3. **Frontend Production Routing**:
+     - Updated `frontend/src/api.ts` so `getApiBaseUrl()` returns `""` when `import.meta.env.PROD` is true, ensuring all requests route relatively to the Vercel serverless backend on the canonical origin without CORS or loopback restriction errors.
+- **Verification Outputs**:
+  - **11-Step Production API Verification (`verify_vercel_prod.cjs`)**:
+    - `[1] GET /api/health` -> `200 OK`
+    - `[2] POST /api/uploads/init` -> `201 Created` with pre-signed PUT URL
+    - `[3] Direct PUT payload` -> `200 OK` directly into Vercel Blob
+    - `[4] POST /api/uploads/:id/finalize` -> `201 Created` with base64url share token
+    - `[5] GET /api/links/:token/info` -> `200 OK` with safe metadata
+    - `[6a] POST /api/links/:token/verify (wrong password)` -> `401 WRONG_PASSWORD` (attemptsLeft: 4)
+    - `[6b] POST /api/links/:token/verify (correct password)` -> `200 OK` with HMAC grantToken
+    - `[7] POST /api/links/:token/download (Download #1)` -> `200 OK` (remainingDownloads: 1)
+    - `[8] Byte-for-byte verification` -> Matches expected payload: `true`
+    - `[9] POST /api/links/:token/download (Download #2)` -> `200 OK` (remainingDownloads: 0)
+    - `[10] POST /api/links/:token/download (Download #3)` -> `410 DOWNLOADS_EXHAUSTED`
+    - `[11] GET /api/links/:token/info (after exhaustion)` -> `410 DOWNLOADS_EXHAUSTED`
+  - **Playwright Headless Chromium Test on Production (`prod-browser.spec.ts`)**:
+    - **1 of 1 passed (10.8s)**: Uploaded real file through the UI, generated QR/share link, navigated to recipient portal, entered wrong password, entered correct password, downloaded file, verified byte-for-byte match with original.
+  - **Live Production URL**: [`https://dropdead-share.vercel.app`](https://dropdead-share.vercel.app) (Deployment `dpl_8ss8nDKRZdAutCCYQcP5LfjkJJ9q`).
+
 ---
 *End of Ledger. Subsequent changes, decisions, and test outputs will be appended below.*
 

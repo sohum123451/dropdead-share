@@ -92,6 +92,10 @@ export function getApiBaseUrl(): string {
       return custom.trim().replace(/\/$/, '');
     }
   }
+  // In production builds, always use relative paths on the same origin
+  if (import.meta.env.PROD) {
+    return '';
+  }
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL.replace(/\/$/, '');
   }
